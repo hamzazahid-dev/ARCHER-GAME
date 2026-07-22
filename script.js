@@ -3,13 +3,13 @@ var cursor = svg.createSVGPoint();
 var arrows = document.querySelector(".arrows");
 var randomAngle = 0;
 
-// center of target
+// Center of target
 var target = {
 	x: 900,
 	y: 249.5
 };
 
-// target intersection line segment
+// Target intersection line segment
 var lineSegment = {
 	x1: 875,
 	y1: 280,
@@ -17,63 +17,72 @@ var lineSegment = {
 	y2: 220
 };
 
-// bow rotation point
+// Bow rotation point
 var pivot = {
 	x: 100,
 	y: 250
 };
 
-// Listen for pointerdown to support touch, stylus, and mouse
-window.addEventListener("pointerdown", draw);
+// Ensure SVG element is touch-ready
+svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+
+// Listen on both SVG and Window for touch and pointer events
+svg.addEventListener("pointerdown", draw);
+svg.addEventListener("touchstart", draw, { passive: false });
 
 function draw(e) {
-	// Prevent default scrolling / zooming when touching the SVG game area
-	if (e.target.tagName === "svg" || svg.contains(e.target)) {
-		e.preventDefault();
-	}
+	if (e.cancelable) e.preventDefault();
 
-	// pull back arrow
+	// Pull back arrow
 	randomAngle = (Math.random() * Math.PI * 0.03) - 0.015;
-	TweenMax.to(".arrow-angle use", 0.3, {
+	TweenMax.set(".arrow-angle use", {
 		opacity: 1
 	});
 
-	// Use pointermove & pointerup for uniform touch/mouse handling
-	window.addEventListener("pointermove", aim);
+	// Touch & pointer movement listeners
+	window.addEventListener("pointermove", aim, { passive: false });
+	window.addEventListener("touchmove", aim, { passive: false });
 	window.addEventListener("pointerup", loose);
+	window.addEventListener("touchend", loose);
+	
 	aim(e);
 }
 
 function aim(e) {
 	if (e.cancelable) e.preventDefault();
 
-	// get mouse/touch position in relation to svg position and scale
+	// Get mouse/touch position in relation to svg position and scale
 	var point = getMouseSVG(e);
+	if (!point) return;
+
 	point.x = Math.min(point.x, pivot.x - 7);
 	point.y = Math.max(point.y, pivot.y + 7);
 	var dx = point.x - pivot.x;
 	var dy = point.y - pivot.y;
 	
-	// Make it more difficult by adding random angle each time
+	// Calculate rotation angle
 	var angle = Math.atan2(dy, dx) + randomAngle;
 	var bowAngle = angle - Math.PI;
 	var distance = Math.min(Math.sqrt((dx * dx) + (dy * dy)), 50);
 	var scale = Math.min(Math.max(distance / 30, 1), 2);
 	
-	TweenMax.to("#bow", 0.3, {
+	// Use TweenMax.set for immediate tracking without motion lag
+	TweenMax.set("#bow", {
 		scaleX: scale,
 		rotation: bowAngle + "rad",
 		transformOrigin: "right center"
 	});
 
-	TweenMax.to(".arrow-angle", 0.3, {
+	TweenMax.set(".arrow-angle", {
 		rotation: bowAngle + "rad",
 		svgOrigin: "100 250"
 	});
-	TweenMax.to(".arrow-angle use", 0.3, {
+	
+	TweenMax.set(".arrow-angle use", {
 		x: -distance
 	});
-	TweenMax.to("#bow polyline", 0.3, {
+	
+	TweenMax.set("#bow polyline", {
 		attr: {
 			points: "88,200 " + Math.min(pivot.x - ((1 / scale) * distance), 88) + ",250 88,300"
 		}
@@ -86,7 +95,7 @@ function aim(e) {
 	};
 	var arcWidth = offset.x * 3;
 
-	TweenMax.to("#arc", 0.3, {
+	TweenMax.set("#arc", {
 		attr: {
 			d: "M100,250c" + offset.x + "," + offset.y + "," + (arcWidth - offset.x) + "," + (offset.y + 50) + "," + arcWidth + ",50"
 		},
@@ -95,28 +104,31 @@ function aim(e) {
 }
 
 function loose(e) {
-	// release arrow
+	// Release arrow
 	window.removeEventListener("pointermove", aim);
+	window.removeEventListener("touchmove", aim);
 	window.removeEventListener("pointerup", loose);
+	window.removeEventListener("touchend", loose);
 
-	TweenMax.to("#bow", 0.4, {
+	// Snap bow back with fluid spring physics
+	TweenMax.to("#bow", 0.3, {
 		scaleX: 1,
 		transformOrigin: "right center",
 		ease: Elastic.easeOut
 	});
-	TweenMax.to("#bow polyline", 0.4, {
+	TweenMax.to("#bow polyline", 0.3, {
 		attr: {
 			points: "88,200 88,250 88,300"
 		},
 		ease: Elastic.easeOut
 	});
 
-	// duplicate arrow
+	// Duplicate arrow
 	var newArrow = document.createElementNS("http://www.w3.org/2000/svg", "use");
 	newArrow.setAttributeNS('http://www.w3.org/1999/xlink', 'href', "#arrow");
 	arrows.appendChild(newArrow);
 
-	// animate arrow along path
+	// Animate arrow along path
 	var path = MorphSVGPlugin.pathDataToBezier("#arc");
 	TweenMax.to([newArrow], 0.5, {
 		force3D: true,
@@ -130,18 +142,17 @@ function loose(e) {
 		onComplete: onMiss,
 		ease: Linear.easeNone
 	});
-	TweenMax.to("#arc", 0.3, {
+	TweenMax.to("#arc", 0.2, {
 		opacity: 0
 	});
 	
-	// hide previous arrow
+	// Hide aiming arrow
 	TweenMax.set(".arrow-angle use", {
 		opacity: 0
 	});
 }
 
 function hitTest(tween) {
-	// check for collisions with arrow and target
 	var arrow = tween.target[0];
 	var transform = arrow._gsTransform;
 	var radians = transform.rotation * Math.PI / 180;
@@ -193,10 +204,27 @@ function showMessage(selector) {
 }
 
 function getMouseSVG(e) {
-	// normalize mouse/touch position within svg coordinates
-	cursor.x = e.clientX;
-	cursor.y = e.clientY;
-	return cursor.matrixTransform(svg.getScreenCTM().inverse());
+	var clientX, clientY;
+
+	if (e.touches && e.touches.length > 0) {
+		clientX = e.touches[0].clientX;
+		clientY = e.touches[0].clientY;
+	} else if (e.changedTouches && e.changedTouches.length > 0) {
+		clientX = e.changedTouches[0].clientX;
+		clientY = e.changedTouches[0].clientY;
+	} else {
+		clientX = e.clientX;
+		clientY = e.clientY;
+	}
+
+	if (clientX === undefined || clientY === undefined) return null;
+
+	var ctm = svg.getScreenCTM();
+	if (!ctm) return null;
+
+	cursor.x = clientX;
+	cursor.y = clientY;
+	return cursor.matrixTransform(ctm.inverse());
 }
 
 function getIntersection(segment1, segment2) {
@@ -210,7 +238,7 @@ function getIntersection(segment1, segment2) {
 	if (denominator == 0) {
 		return null;
 	}
-	var ua = (dx2 * cy - dy2 * cx) / denominator; // Fixed syntax error
+	var ua = (dx2 * cy - dy2 * cx) / denominator;
 	var ub = (dx1 * cy - dy1 * cx) / denominator;
 	return {
 		x: segment1.x1 + ua * dx1,
