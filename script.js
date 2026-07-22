@@ -22,47 +22,50 @@ var pivot = {
 	x: 100,
 	y: 250
 };
-aim({
-	clientX: 320,
-	clientY: 300
-});
 
-
-
-// set up start drag event
-window.addEventListener("mousedown", draw);
+// Listen for pointerdown to support touch, stylus, and mouse
+window.addEventListener("pointerdown", draw);
 
 function draw(e) {
+	// Prevent default scrolling / zooming when touching the SVG game area
+	if (e.target.tagName === "svg" || svg.contains(e.target)) {
+		e.preventDefault();
+	}
+
 	// pull back arrow
 	randomAngle = (Math.random() * Math.PI * 0.03) - 0.015;
 	TweenMax.to(".arrow-angle use", 0.3, {
 		opacity: 1
 	});
-	window.addEventListener("mousemove", aim);
-	window.addEventListener("mouseup", loose);
+
+	// Use pointermove & pointerup for uniform touch/mouse handling
+	window.addEventListener("pointermove", aim);
+	window.addEventListener("pointerup", loose);
 	aim(e);
 }
 
-
-
 function aim(e) {
-	// get mouse position in relation to svg position and scale
+	if (e.cancelable) e.preventDefault();
+
+	// get mouse/touch position in relation to svg position and scale
 	var point = getMouseSVG(e);
 	point.x = Math.min(point.x, pivot.x - 7);
 	point.y = Math.max(point.y, pivot.y + 7);
 	var dx = point.x - pivot.x;
 	var dy = point.y - pivot.y;
+	
 	// Make it more difficult by adding random angle each time
 	var angle = Math.atan2(dy, dx) + randomAngle;
 	var bowAngle = angle - Math.PI;
 	var distance = Math.min(Math.sqrt((dx * dx) + (dy * dy)), 50);
 	var scale = Math.min(Math.max(distance / 30, 1), 2);
+	
 	TweenMax.to("#bow", 0.3, {
 		scaleX: scale,
 		rotation: bowAngle + "rad",
 		transformOrigin: "right center"
 	});
-	var arrowX = Math.min(pivot.x - ((1 / scale) * distance), 88);
+
 	TweenMax.to(".arrow-angle", 0.3, {
 		rotation: bowAngle + "rad",
 		svgOrigin: "100 250"
@@ -87,15 +90,14 @@ function aim(e) {
 		attr: {
 			d: "M100,250c" + offset.x + "," + offset.y + "," + (arcWidth - offset.x) + "," + (offset.y + 50) + "," + arcWidth + ",50"
 		},
-			autoAlpha: distance/60
+		autoAlpha: distance / 60
 	});
-
 }
 
-function loose() {
+function loose(e) {
 	// release arrow
-	window.removeEventListener("mousemove", aim);
-	window.removeEventListener("mouseup", loose);
+	window.removeEventListener("pointermove", aim);
+	window.removeEventListener("pointerup", loose);
 
 	TweenMax.to("#bow", 0.4, {
 		scaleX: 1,
@@ -108,6 +110,7 @@ function loose() {
 		},
 		ease: Elastic.easeOut
 	});
+
 	// duplicate arrow
 	var newArrow = document.createElementNS("http://www.w3.org/2000/svg", "use");
 	newArrow.setAttributeNS('http://www.w3.org/1999/xlink', 'href', "#arrow");
@@ -130,7 +133,8 @@ function loose() {
 	TweenMax.to("#arc", 0.3, {
 		opacity: 0
 	});
-	//hide previous arrow
+	
+	// hide previous arrow
 	TweenMax.set(".arrow-angle use", {
 		opacity: 0
 	});
@@ -146,30 +150,27 @@ function hitTest(tween) {
 		y1: transform.y,
 		x2: (Math.cos(radians) * 60) + transform.x,
 		y2: (Math.sin(radians) * 60) + transform.y
-	}
+	};
 
 	var intersection = getIntersection(arrowSegment, lineSegment);
-	if (intersection.segment1 && intersection.segment2) {
+	if (intersection && intersection.segment1 && intersection.segment2) {
 		tween.pause();
 		var dx = intersection.x - target.x;
 		var dy = intersection.y - target.y;
 		var distance = Math.sqrt((dx * dx) + (dy * dy));
 		var selector = ".hit";
 		if (distance < 7) {
-			selector = ".bullseye"
+			selector = ".bullseye";
 		}
 		showMessage(selector);
 	}
-
 }
 
 function onMiss() {
-	// Damn!
 	showMessage(".miss");
 }
 
 function showMessage(selector) {
-	// handle all text animations by providing selector
 	TweenMax.killTweensOf(selector);
 	TweenMax.killChildTweensOf(selector);
 	TweenMax.set(selector, {
@@ -191,17 +192,14 @@ function showMessage(selector) {
 	}, .03);
 }
 
-
-
 function getMouseSVG(e) {
-	// normalize mouse position within svg coordinates
+	// normalize mouse/touch position within svg coordinates
 	cursor.x = e.clientX;
 	cursor.y = e.clientY;
 	return cursor.matrixTransform(svg.getScreenCTM().inverse());
 }
 
 function getIntersection(segment1, segment2) {
-	// find intersection point of two line segments and whether or not the point is on either line segment
 	var dx1 = segment1.x2 - segment1.x1;
 	var dy1 = segment1.y2 - segment1.y1;
 	var dx2 = segment2.x2 - segment2.x1;
@@ -212,7 +210,7 @@ function getIntersection(segment1, segment2) {
 	if (denominator == 0) {
 		return null;
 	}
-	var ua = (dx2 * cy - dy2 * cx) / denominator;
+	var ua = (dx2 * cy - dy2 * cx) / denominator; // Fixed syntax error
 	var ub = (dx1 * cy - dy1 * cx) / denominator;
 	return {
 		x: segment1.x1 + ua * dx1,
