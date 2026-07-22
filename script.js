@@ -267,3 +267,33 @@ function getIntersection(segment1, segment2) {
 		segment2: ub >= 0 && ub <= 1
 	};
 }
+function createWindParticles() {
+  var svgNS = "http://www.w3.org/2000/svg";
+  var particleGroup = document.createElementNS(svgNS, "g");
+  particleGroup.setAttribute("class", "particles");
+  svg.insertBefore(particleGroup, svg.firstChild);
+
+  for (var i = 0; i < 20; i++) {
+    var circle = document.createElementNS(svgNS, "circle");
+    circle.setAttribute("r", Math.random() * 2 + 1);
+    circle.setAttribute("fill", "#ffffff");
+    circle.setAttribute("opacity", Math.random() * 0.4 + 0.1);
+    particleGroup.appendChild(circle);
+
+    // Animate across screen
+    TweenMax.set(circle, {
+      x: Math.random() * 1000,
+      y: Math.random() * 500
+    });
+
+    TweenMax.to(circle, Math.random() * 3 + 2, {
+      x: "+=200",
+      y: "+=30",
+      repeat: -1,
+      ease: Linear.easeNone
+    });
+  }
+}
+
+// Call on startup
+createWindParticles();
