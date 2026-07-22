@@ -14,3 +14,6 @@ span{
 	font-family:sans-serif;
 	opacity:.3;
 }
+svg {
+  touch-action: none;
+}
