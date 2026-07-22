@@ -23,23 +23,31 @@ var pivot = {
 	y: 250
 };
 
-// Ensure SVG element is touch-ready
+// Drag tracking variables for Slingshot mode
+var isDragging = false;
+var dragStart = { x: 0, y: 0 };
+
 svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
 
-// Listen on both SVG and Window for touch and pointer events
-svg.addEventListener("pointerdown", draw);
-svg.addEventListener("touchstart", draw, { passive: false });
+// Global touch / pointer listeners on window for anywhere-on-screen touch
+window.addEventListener("pointerdown", startDrag);
+window.addEventListener("touchstart", startDrag, { passive: false });
 
-function draw(e) {
+function startDrag(e) {
 	if (e.cancelable) e.preventDefault();
 
-	// Pull back arrow
+	var point = getMouseSVG(e);
+	if (!point) return;
+
+	isDragging = true;
+	dragStart.x = point.x;
+	dragStart.y = point.y;
+
 	randomAngle = (Math.random() * Math.PI * 0.03) - 0.015;
 	TweenMax.set(".arrow-angle use", {
 		opacity: 1
 	});
 
-	// Touch & pointer movement listeners
 	window.addEventListener("pointermove", aim, { passive: false });
 	window.addEventListener("touchmove", aim, { passive: false });
 	window.addEventListener("pointerup", loose);
@@ -49,24 +57,36 @@ function draw(e) {
 }
 
 function aim(e) {
+	if (!isDragging) return;
 	if (e.cancelable) e.preventDefault();
 
-	// Get mouse/touch position in relation to svg position and scale
-	var point = getMouseSVG(e);
-	if (!point) return;
+	var currentPoint = getMouseSVG(e);
+	if (!currentPoint) return;
 
-	point.x = Math.min(point.x, pivot.x - 7);
-	point.y = Math.max(point.y, pivot.y + 7);
-	var dx = point.x - pivot.x;
-	var dy = point.y - pivot.y;
-	
-	// Calculate rotation angle
+	// Calculate drag delta from initial touch point
+	var dragDx = currentPoint.x - dragStart.x;
+	var dragDy = currentPoint.y - dragStart.y;
+
+	// Invert direction for Slingshot feel (Pulling down/left aims up/right)
+	var dx = -dragDx;
+	var dy = -dragDy;
+
+	// Prevent aim snap when touch barely moves
+	if (Math.abs(dx) < 2 && Math.abs(dy) < 2) {
+		dx = -1;
+		dy = 0;
+	}
+
+	// Calculate angle based on pull vector
 	var angle = Math.atan2(dy, dx) + randomAngle;
-	var bowAngle = angle - Math.PI;
-	var distance = Math.min(Math.sqrt((dx * dx) + (dy * dy)), 50);
+	var bowAngle = angle;
+	
+	// Power / draw distance based on total drag distance
+	var dragDistance = Math.sqrt((dragDx * dragDx) + (dragDy * dragDy));
+	var distance = Math.min(dragDistance, 50);
 	var scale = Math.min(Math.max(distance / 30, 1), 2);
 	
-	// Use TweenMax.set for immediate tracking without motion lag
+	// Immediate position tracking without motion lag
 	TweenMax.set("#bow", {
 		scaleX: scale,
 		rotation: bowAngle + "rad",
@@ -104,13 +124,15 @@ function aim(e) {
 }
 
 function loose(e) {
-	// Release arrow
+	if (!isDragging) return;
+	isDragging = false;
+
 	window.removeEventListener("pointermove", aim);
 	window.removeEventListener("touchmove", aim);
 	window.removeEventListener("pointerup", loose);
 	window.removeEventListener("touchend", loose);
 
-	// Snap bow back with fluid spring physics
+	// Snap bow back
 	TweenMax.to("#bow", 0.3, {
 		scaleX: 1,
 		transformOrigin: "right center",
@@ -123,12 +145,11 @@ function loose(e) {
 		ease: Elastic.easeOut
 	});
 
-	// Duplicate arrow
+	// Fire arrow
 	var newArrow = document.createElementNS("http://www.w3.org/2000/svg", "use");
 	newArrow.setAttributeNS('http://www.w3.org/1999/xlink', 'href', "#arrow");
 	arrows.appendChild(newArrow);
 
-	// Animate arrow along path
 	var path = MorphSVGPlugin.pathDataToBezier("#arc");
 	TweenMax.to([newArrow], 0.5, {
 		force3D: true,
@@ -146,7 +167,6 @@ function loose(e) {
 		opacity: 0
 	});
 	
-	// Hide aiming arrow
 	TweenMax.set(".arrow-angle use", {
 		opacity: 0
 	});
