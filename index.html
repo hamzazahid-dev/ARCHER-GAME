@@ -5,6 +5,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 
+    <!-- Target Favicon for Browser Tabs -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%23ffffff'/><circle cx='50' cy='50' r='35' fill='%23000000'/><circle cx='50' cy='50' r='25' fill='%233b82f6'/><circle cx='50' cy='50' r='15' fill='%23ef4444'/><circle cx='50' cy='50' r='5' fill='%23eab308'/></svg>" />
+
     <style>
       html, body {
         width: 100%;
@@ -12,18 +15,70 @@
         margin: 0;
         padding: 0;
         overflow: hidden;
-        background-color: #1e1b4b;
+        background-color: #000000;
         font-family: sans-serif;
         touch-action: none;
         -webkit-user-select: none;
         user-select: none;
       }
 
+      /* Intro Overlay Styling */
+      #intro-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background-color: #000000;
+        z-index: 9999;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        transition: opacity 0.8s ease, visibility 0.8s ease;
+      }
+
+      #intro-video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .skip-btn {
+        position: absolute;
+        bottom: 30px;
+        right: 30px;
+        background: rgba(255, 255, 255, 0.2);
+        border: 2px solid #ffffff;
+        color: #ffffff;
+        padding: 10px 20px;
+        font-size: 16px;
+        font-weight: bold;
+        border-radius: 25px;
+        cursor: pointer;
+        backdrop-filter: blur(5px);
+        transition: background 0.2s, transform 0.2s;
+        z-index: 10000;
+      }
+
+      .skip-btn:hover {
+        background: rgba(255, 255, 255, 0.4);
+        transform: scale(1.05);
+      }
+
+      /* Hide Intro State */
+      #intro-container.hidden {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+      }
+
+      /* Game SVG Styling */
       svg#game {
         width: 100%;
         height: 100%;
         touch-action: none;
         -webkit-touch-callout: none;
+        background-color: #1e1b4b;
       }
 
       span.instruction {
@@ -51,6 +106,17 @@
     </style>
   </head>
   <body>
+
+    <!-- Gaming Intro Container -->
+    <div id="intro-container">
+      <video id="intro-video" autoplay muted playsinline>
+        <source src="https://raw.githubusercontent.com/hamzazahid-dev/ARCHER-GAME/main/Free%20gaming%20intro%20template%20tiger.....mp4" type="video/mp4" />
+        Your browser does not support the video tag.
+      </video>
+      <button class="skip-btn" onclick="startGame()">Skip Intro</button>
+    </div>
+
+    <!-- Archery Game -->
     <svg id="game" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1000 400" overflow="visible">
       <defs>
         <!-- Background Gradient -->
@@ -72,7 +138,7 @@
           <stop offset="100%" stop-color="#fff" stop-opacity="0"/>
         </linearGradient>
 
-        <!-- Pure Arrow Definition -->
+        <!-- Arrow Definition -->
         <g id="arrow">
           <line x2="60" fill="none" stroke="#e2e8f0" stroke-width="2" />
           <polygon fill="#cbd5e1" points="64 0 58 3 58 -3" />
@@ -80,14 +146,14 @@
         </g>
       </defs>
 
-      <!-- Clean Background -->
+      <!-- Background -->
       <rect x="-200" y="-100" width="1400" height="600" fill="url(#skyGradient)" />
       <circle cx="900" cy="250" r="180" fill="url(#sunGlow)" />
 
       <!-- Aiming Arc Trajectory -->
       <path id="arc" fill="none" stroke="url(#ArcGradient)" stroke-width="3" stroke-dasharray="6,4" d="M100,250c250-400,550-400,800,0" pointer-events="none"/>
 
-      <!-- Clean Target Circles -->
+      <!-- Target Circles -->
       <g id="target" transform="translate(900, 250) rotate(-30)">
         <ellipse cx="0" cy="0" rx="40" ry="80" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
         <ellipse cx="0" cy="0" rx="30" ry="60" fill="#000000"/>
@@ -108,7 +174,7 @@
       <!-- Fired Arrows Container -->
       <g class="arrows" pointer-events="none"></g>
 
-      <!-- Clean Text Feedback (Replaced author custom path glyphs with standard text) -->
+      <!-- Feedback Texts -->
       <text class="miss feedback-text" x="500" y="150" fill="#94a3b8" opacity="0">MISS!</text>
       <text class="hit feedback-text" x="500" y="150" fill="#eab308" opacity="0">HIT!</text>
       <text class="bullseye feedback-text" x="500" y="150" fill="#ef4444" opacity="0">BULLSEYE!</text>
@@ -116,12 +182,39 @@
 
     <span class="instruction">Pull back and release to shoot!</span>
 
-    <!-- Dependency Libraries -->
+    <!-- GSAP Animation Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/1.19.1/TweenMax.min.js"></script>
 
-    <!-- Game Logic -->
+    <!-- Game Logic & Intro Script -->
     <script>
-      var svg = document.querySelector("svg");
+      var introVideo = document.getElementById("intro-video");
+      var introContainer = document.getElementById("intro-container");
+
+      function startGame() {
+        if (introContainer) {
+          introContainer.classList.add("hidden");
+          if (introVideo) {
+            introVideo.pause();
+          }
+        }
+      }
+
+      // Automatically transition to game when intro finishes
+      introVideo.addEventListener("ended", function() {
+        startGame();
+      });
+
+      // Fallback: If autoplay is blocked by browser policy, allow click anywhere to start
+      introContainer.addEventListener("click", function(e) {
+        if (e.target.tagName !== "BUTTON") {
+          introVideo.play().catch(function() {
+            startGame();
+          });
+        }
+      });
+
+      // --- Archery Game Logic ---
+      var svg = document.querySelector("svg#game");
       var cursor = svg.createSVGPoint();
       var arrows = document.querySelector(".arrows");
       var randomAngle = 0;
@@ -370,19 +463,6 @@
           y: segment1.y1 + ua * dy1,
           segment1: ua >= 0 && ua <= 1,
           segment2: ub >= 0 && ub <= 1
-          <head>
-  <title>Archery Game</title>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-
-  <!-- THIS OVERRIDES THE TAB / GRID LOGO WITH A CLEAN TARGET ICON -->
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%23ffffff'/><circle cx='50' cy='50' r='35' fill='%23000000'/><circle cx='50' cy='50' r='25' fill='%233b82f6'/><circle cx='50' cy='50' r='15' fill='%23ef4444'/><circle cx='50' cy='50' r='5' fill='%23eab308'/></svg>" />
-
-  <style>
-    /* ... rest of your CSS ... */
-  </style>
-</head>
-
         };
       }
     </script>
