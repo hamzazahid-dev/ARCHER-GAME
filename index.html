@@ -3,10 +3,9 @@
   <head>
     <title>Archery Game</title>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-
-    <!-- Target Favicon for Browser Tabs -->
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%23ffffff'/><circle cx='50' cy='50' r='35' fill='%23000000'/><circle cx='50' cy='50' r='25' fill='%233b82f6'/><circle cx='50' cy='50' r='15' fill='%23ef4444'/><circle cx='50' cy='50' r='5' fill='%23eab308'/></svg>" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="https://i.ibb.co/M6KTWnf/pic.jpg" />
+    <link href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Fredoka+One&display=swap" rel="stylesheet">
 
     <style>
       html, body {
@@ -15,224 +14,962 @@
         margin: 0;
         padding: 0;
         overflow: hidden;
-        background-color: #000000;
-        font-family: sans-serif;
+        background-color: #1e1b4b;
+        font-family: 'Fredoka One', cursive, sans-serif;
         touch-action: none;
-        -webkit-user-select: none;
         user-select: none;
       }
 
-      /* Intro Overlay Styling */
-      #intro-container {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
+      svg#game {
+        width: 100%;
         height: 100vh;
-        background-color: #000000;
-        z-index: 9999;
+        touch-action: none;
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+      }
+
+      /* In-Game HUD */
+      #hud {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        right: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        pointer-events: none;
+        color: #ffffff;
+        font-weight: 600;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        z-index: 5;
+        opacity: 0;
+        transition: opacity 0.5s ease;
+      }
+
+      #hud.active {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      .hud-card {
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(8px);
+        border: 2px solid rgba(255, 255, 255, 0.2);
+        padding: 8px 18px;
+        border-radius: 16px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-width: 80px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+      }
+
+      .hud-label {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        color: #cbd5e1;
+      }
+
+      .hud-value {
+        font-size: 22px;
+        color: #f8fafc;
+      }
+
+      .hud-btn {
+        pointer-events: auto;
+        cursor: pointer;
+        background: linear-gradient(180deg, #facc15 0%, #eab308 50%, #ca8a04 100%);
+        border: 3px solid #ffffff;
+        border-radius: 50%;
+        width: 45px;
+        height: 45px;
         display: flex;
         justify-content: center;
         align-items: center;
-        transition: opacity 0.8s ease, visibility 0.8s ease;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+        transition: transform 0.1s ease;
       }
 
-      #intro-video {
+      .hud-btn:active {
+        transform: scale(0.9);
+      }
+
+      span.instruction {
+        position: absolute;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        color: #ffffff;
+        font-size: 15px;
+        letter-spacing: 1px;
+        pointer-events: none;
+        opacity: 0;
+        background: rgba(0,0,0,0.4);
+        padding: 6px 16px;
+        border-radius: 20px;
+        z-index: 5;
+        transition: opacity 0.5s ease;
+      }
+
+      span.instruction.active {
+        opacity: 0.85;
+      }
+
+      /* Screen Overlay Base */
+      .screen-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
         width: 100%;
         height: 100%;
-        object-fit: cover;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        align-items: center;
+        z-index: 10;
+        box-sizing: border-box;
+        padding: 40px 20px 30px 20px;
+        transition: opacity 0.4s ease, visibility 0.4s ease;
       }
 
-      .skip-btn {
-        position: absolute;
-        bottom: 30px;
-        right: 30px;
-        background: rgba(255, 255, 255, 0.2);
-        border: 2px solid #ffffff;
-        color: #ffffff;
-        padding: 10px 20px;
-        font-size: 16px;
-        font-weight: bold;
-        border-radius: 25px;
-        cursor: pointer;
-        backdrop-filter: blur(5px);
-        transition: background 0.2s, transform 0.2s;
-        z-index: 10000;
-      }
-
-      .skip-btn:hover {
-        background: rgba(255, 255, 255, 0.4);
-        transform: scale(1.05);
-      }
-
-      /* Hide Intro State */
-      #intro-container.hidden {
+      .screen-overlay.hidden {
         opacity: 0;
         visibility: hidden;
         pointer-events: none;
       }
 
-      /* Game SVG Styling */
-      svg#game {
+      /* Game Title */
+      .game-title {
+        font-family: 'Luckiest Guy', cursive;
+        font-size: clamp(2.5rem, 8vw, 5rem);
+        color: #ffffff;
+        text-transform: uppercase;
+        letter-spacing: 3px;
+        text-align: center;
+        line-height: 1;
+        -webkit-text-stroke: 3px #3d1c02;
+        text-shadow: 
+          0 5px 0 #3d1c02,
+          0 10px 0 #200e01,
+          0 15px 25px rgba(0,0,0,0.6);
+        margin-top: 10px;
+      }
+
+      /* Center Play Button */
+      .play-btn-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .btn-play {
+        background: linear-gradient(180deg, #fde047 0%, #eab308 45%, #ca8a04 100%);
+        border: 5px solid #ffffff;
+        border-radius: 28px;
+        padding: 15px 65px;
+        font-family: 'Luckiest Guy', cursive;
+        font-size: clamp(2rem, 5vw, 3.5rem);
+        color: #ffffff;
+        letter-spacing: 2px;
+        cursor: pointer;
+        box-shadow: 
+          0 8px 0 #854d0e,
+          0 15px 20px rgba(0,0,0,0.4);
+        -webkit-text-stroke: 2px #713f12;
+        text-shadow: 0 3px 0 #713f12;
+        transition: transform 0.1s ease, box-shadow 0.1s ease;
+        outline: none;
+      }
+
+      .btn-play:hover {
+        transform: translateY(-3px) scale(1.03);
+      }
+
+      .btn-play:active {
+        transform: translateY(6px) scale(0.97);
+        box-shadow: 0 2px 0 #854d0e;
+      }
+
+      /* Bottom Control Bar */
+      .bottom-bar {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 15px;
+        width: 100%;
+        max-width: 600px;
+      }
+
+      .btn-circle {
+        width: clamp(50px, 8vw, 65px);
+        height: clamp(50px, 8vw, 65px);
+        background: linear-gradient(180deg, #fde047 0%, #eab308 50%, #ca8a04 100%);
+        border: 4px solid #ffffff;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        box-shadow: 
+          0 5px 0 #854d0e,
+          0 8px 15px rgba(0,0,0,0.3);
+        transition: transform 0.1s ease, box-shadow 0.1s ease;
+        outline: none;
+      }
+
+      .btn-circle:hover {
+        transform: translateY(-2px) scale(1.05);
+      }
+
+      .btn-circle:active {
+        transform: translateY(4px) scale(0.95);
+        box-shadow: 0 1px 0 #854d0e;
+      }
+
+      .btn-circle svg {
+        width: 55%;
+        height: 55%;
+        fill: #3d1c02;
+        filter: drop-shadow(0 1px 0 #fef08a);
+      }
+
+      /* Level Select Screen */
+      #level-select {
+        background: rgba(15, 23, 42, 0.75);
+        backdrop-filter: blur(10px);
+      }
+
+      .level-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 15px;
+        max-width: 650px;
+        width: 100%;
+        margin: auto;
+      }
+
+      .level-card {
+        aspect-ratio: 1;
+        background: linear-gradient(180deg, #38bdf8 0%, #0284c7 100%);
+        border: 4px solid #ffffff;
+        border-radius: 18px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+        box-shadow: 0 6px 0 #0369a1, 0 10px 15px rgba(0,0,0,0.4);
+        transition: transform 0.15s ease;
+        position: relative;
+      }
+
+      .level-card:hover:not(.locked) {
+        transform: translateY(-3px) scale(1.04);
+      }
+
+      .level-card:active:not(.locked) {
+        transform: translateY(3px);
+        box-shadow: 0 2px 0 #0369a1;
+      }
+
+      .level-card.locked {
+        background: linear-gradient(180deg, #94a3b8 0%, #64748b 100%);
+        box-shadow: 0 6px 0 #475569;
+        cursor: not-allowed;
+      }
+
+      .level-num {
+        font-family: 'Luckiest Guy', cursive;
+        font-size: clamp(1.2rem, 3.5vw, 2rem);
+        color: #ffffff;
+        -webkit-text-stroke: 1.5px #0369a1;
+        text-shadow: 0 2px 0 #0369a1;
+      }
+
+      .level-stars {
+        display: flex;
+        gap: 2px;
+        margin-top: 4px;
+        font-size: 11px;
+      }
+
+      .star {
+        color: #cbd5e1;
+      }
+
+      .star.active {
+        color: #facc15;
+        text-shadow: 0 0 4px rgba(250, 204, 21, 0.8);
+      }
+
+      .lock-icon {
+        font-size: 1.8rem;
+      }
+
+      /* Modals */
+      .modal-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
         width: 100%;
         height: 100%;
-        touch-action: none;
-        -webkit-touch-callout: none;
-        background-color: #1e1b4b;
+        background: rgba(0, 0, 0, 0.65);
+        backdrop-filter: blur(5px);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 100;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.3s ease, visibility 0.3s ease;
       }
 
-      span.instruction {
-        position: absolute;
-        bottom: 15px;
-        left: 50%;
-        transform: translateX(-50%);
-        color: #ffffff;
-        font-size: 14px;
-        letter-spacing: 1px;
-        pointer-events: none;
-        opacity: 0.8;
-        background: rgba(0, 0, 0, 0.3);
-        padding: 6px 14px;
-        border-radius: 15px;
-        white-space: nowrap;
+      .modal-overlay.active {
+        opacity: 1;
+        visibility: visible;
       }
 
-      .feedback-text {
+      .modal-card {
+        background: #fef08a;
+        border: 6px solid #854d0e;
+        border-radius: 24px;
+        padding: 24px;
+        width: 90%;
+        max-width: 380px;
+        box-shadow: 0 15px 30px rgba(0,0,0,0.5);
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        color: #713f12;
+      }
+
+      .modal-title {
+        font-family: 'Luckiest Guy', cursive;
+        font-size: 2rem;
+        text-align: center;
+        color: #3d1c02;
+        -webkit-text-stroke: 1px #854d0e;
+        margin-bottom: 5px;
+      }
+
+      /* Level Complete Modal Specifics */
+      .result-stars {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        font-size: 3rem;
+        margin: 5px 0;
+      }
+
+      .result-star {
+        color: #d1d5db;
+        transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), color 0.3s ease;
+      }
+
+      .result-star.earned {
+        color: #facc15;
+        transform: scale(1.2);
+        text-shadow: 0 0 10px #facc15;
+      }
+
+      .stat-row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 1.1rem;
         font-weight: bold;
-        font-size: 36px;
-        text-anchor: middle;
-        user-select: none;
+        background: rgba(133, 77, 14, 0.12);
+        padding: 8px 14px;
+        border-radius: 12px;
+      }
+
+      .modal-actions {
+        display: flex;
+        gap: 10px;
+      }
+
+      .setting-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 1.1rem;
+      }
+
+      /* Volume Slider styling */
+      .volume-slider {
+        accent-color: #ca8a04;
+        width: 110px;
+        cursor: pointer;
+      }
+
+      /* Leaderboard List */
+      .leaderboard-list, .achievement-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .lb-item, .ach-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: rgba(133, 77, 14, 0.15);
+        padding: 8px 12px;
+        border-radius: 12px;
+        font-size: 1rem;
+        font-weight: bold;
+      }
+
+      .ach-item {
+        justify-content: flex-start;
+        gap: 12px;
+      }
+
+      .ach-info {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .ach-title {
+        font-size: 1rem;
+        font-weight: bold;
+        color: #3d1c02;
+      }
+
+      .ach-desc {
+        font-size: 0.8rem;
+        color: #713f12;
+      }
+
+      /* Toggle Switch */
+      .switch {
+        position: relative;
+        display: inline-block;
+        width: 50px;
+        height: 26px;
+      }
+
+      .switch input { opacity: 0; width: 0; height: 0; }
+
+      .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background-color: #cbd5e1;
+        transition: .3s;
+        border-radius: 34px;
+        border: 2px solid #854d0e;
+      }
+
+      .slider:before {
+        position: absolute;
+        content: "";
+        height: 18px; width: 18px;
+        left: 2px; bottom: 2px;
+        background-color: white;
+        transition: .3s;
+        border-radius: 50%;
+      }
+
+      input:checked + .slider { background-color: #22c55e; }
+      input:checked + .slider:before { transform: translateX(24px); }
+
+      .btn-modal {
+        flex: 1;
+        background: linear-gradient(180deg, #fde047 0%, #eab308 50%, #ca8a04 100%);
+        border: 3px solid #854d0e;
+        border-radius: 12px;
+        padding: 10px;
+        font-family: 'Luckiest Guy', cursive;
+        font-size: 1.1rem;
+        color: #3d1c02;
+        cursor: pointer;
+        box-shadow: 0 4px 0 #854d0e;
+        text-align: center;
+      }
+
+      .btn-modal:active {
+        transform: translateY(2px);
+        box-shadow: 0 2px 0 #854d0e;
+      }
+
+      .btn-danger {
+        background: linear-gradient(180deg, #fca5a5 0%, #ef4444 50%, #b91c1c 100%);
+        color: #ffffff;
       }
     </style>
   </head>
   <body>
 
-    <!-- Gaming Intro Container -->
-    <div id="intro-container">
-      <video id="intro-video" autoplay muted playsinline>
-        <source src="https://raw.githubusercontent.com/hamzazahid-dev/ARCHER-GAME/main/Free%20gaming%20intro%20template%20tiger.....mp4" type="video/mp4" />
-        Your browser does not support the video tag.
-      </video>
-      <button class="skip-btn" onclick="startGame()">Skip Intro</button>
+    <!-- Main Menu Screen -->
+    <div id="main-menu" class="screen-overlay">
+      <div class="game-title">ARCHERY<br/>GAME</div>
+
+      <div class="play-btn-container">
+        <button class="btn-play" onclick="openLevelSelect()">PLAY</button>
+      </div>
+
+      <div class="bottom-bar">
+        <button class="btn-circle" onclick="toggleModal('settings-modal', true)" title="Settings">
+          <svg viewBox="0 0 24 24"><path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/></svg>
+        </button>
+        <button class="btn-circle" onclick="toggleModal('leaderboard-modal', true)" title="Leaderboard">
+          <svg viewBox="0 0 24 24"><path d="M7.5 21H2V9h5.5v12zm7.25-18h-5.5v18h5.5V3zM22 13h-5.5v8H22v-8z"/></svg>
+        </button>
+        <button class="btn-circle" onclick="toggleModal('achievements-modal', true)" title="Achievements">
+          <svg viewBox="0 0 24 24"><path d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.63 4.39 4.94A5.01 5.01 0 0011 15.9V18H8v2h8v-2h-3v-2.1c2.12-.41 3.73-2.12 3.96-4.34C19.08 11.23 21 9.15 21 6.6V5c0-1.1-.9-2-2-2zM5 8V7h2v3.82C5.84 10.4 5 9.3 5 8zm14 0c0 1.3-.84 2.4-2 2.82V7h2v1z"/></svg>
+        </button>
+        <button class="btn-circle" onclick="toggleModal('help-modal', true)" title="Help">
+          <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 16h-2v-2h2v2zm1.07-7.75l-.9.92C12.45 11.9 12 12.5 12 14h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H7c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.04-.42 1.99-1.07 2.75z"/></svg>
+        </button>
+      </div>
     </div>
 
-    <!-- Archery Game -->
+    <!-- Level Select Screen -->
+    <div id="level-select" class="screen-overlay hidden">
+      <div class="game-title">SELECT LEVEL</div>
+      <div class="level-grid" id="level-grid"></div>
+      <div class="bottom-bar">
+        <button class="btn-circle" onclick="showMainMenu()" title="Back">
+          <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal-overlay" onclick="if(event.target===this) toggleModal('settings-modal', false)">
+      <div class="modal-card">
+        <div class="modal-title">SETTINGS</div>
+        <div class="setting-row">
+          <span>Piano Music</span>
+          <label class="switch">
+            <input type="checkbox" id="setting-music" checked onchange="toggleMusic(this.checked)">
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="setting-row">
+          <span>Volume</span>
+          <input type="range" class="volume-slider" id="setting-volume" min="0" max="1" step="0.05" value="0.3" oninput="setMusicVolume(this.value)">
+        </div>
+        <div class="setting-row">
+          <span>Wind Particles</span>
+          <label class="switch">
+            <input type="checkbox" id="setting-wind" checked onchange="toggleWind(this.checked)">
+            <span class="slider"></span>
+          </label>
+        </div>
+        <button class="btn-modal btn-danger" onclick="resetGameProgress()">Reset Progress</button>
+        <button class="btn-modal" onclick="toggleModal('settings-modal', false)">Close</button>
+      </div>
+    </div>
+
+    <!-- Leaderboard Modal -->
+    <div id="leaderboard-modal" class="modal-overlay" onclick="if(event.target===this) toggleModal('leaderboard-modal', false)">
+      <div class="modal-card">
+        <div class="modal-title">LEADERBOARD</div>
+        <div class="leaderboard-list">
+          <div class="lb-item"><span>#1 Robin Hood</span><span>12,500</span></div>
+          <div class="lb-item"><span>#2 Hawkeye</span><span>9,800</span></div>
+          <div class="lb-item"><span>#3 Legolas</span><span>8,250</span></div>
+          <div class="lb-item" style="border: 2px solid #854d0e;"><span>#4 You</span><span id="lb-your-score">0</span></div>
+        </div>
+        <button class="btn-modal" onclick="toggleModal('leaderboard-modal', false)">Close</button>
+      </div>
+    </div>
+
+    <!-- Achievements Modal -->
+    <div id="achievements-modal" class="modal-overlay" onclick="if(event.target===this) toggleModal('achievements-modal', false)">
+      <div class="modal-card">
+        <div class="modal-title">ACHIEVEMENTS</div>
+        <div class="achievement-list">
+          <div class="ach-item">
+            <span style="font-size:1.5rem">🎯</span>
+            <div class="ach-info">
+              <span class="ach-title">Bullseye Master</span>
+              <span class="ach-desc">Hit the center target</span>
+            </div>
+          </div>
+          <div class="ach-item">
+            <span style="font-size:1.5rem">🏹</span>
+            <div class="ach-info">
+              <span class="ach-title">First Shot</span>
+              <span class="ach-desc">Launch your first arrow</span>
+            </div>
+          </div>
+        </div>
+        <button class="btn-modal" onclick="toggleModal('achievements-modal', false)">Close</button>
+      </div>
+    </div>
+
+    <!-- Help Modal -->
+    <div id="help-modal" class="modal-overlay" onclick="if(event.target===this) toggleModal('help-modal', false)">
+      <div class="modal-card">
+        <div class="modal-title">HOW TO PLAY</div>
+        <p style="text-align: center; line-height: 1.4; margin: 0;">
+          1. Touch or click and pull back on the screen to aim.<br/><br/>
+          2. Adjust your angle and power.<br/><br/>
+          3. You have 8 arrows per level to hit target scores!
+        </p>
+        <button class="btn-modal" onclick="toggleModal('help-modal', false)">Got It!</button>
+      </div>
+    </div>
+
+    <!-- Level Complete Modal -->
+    <div id="level-complete-modal" class="modal-overlay">
+      <div class="modal-card">
+        <div class="modal-title" id="complete-title">LEVEL COMPLETE</div>
+        <div class="result-stars">
+          <span class="result-star" id="star-1">★</span>
+          <span class="result-star" id="star-2">★</span>
+          <span class="result-star" id="star-3">★</span>
+        </div>
+        <div class="stat-row">
+          <span>Score:</span>
+          <span id="end-score">0</span>
+        </div>
+        <div class="stat-row">
+          <span>Target Score:</span>
+          <span id="end-target">0</span>
+        </div>
+        <div class="modal-actions">
+          <button class="btn-modal" onclick="openLevelSelect()">Levels</button>
+          <button class="btn-modal" onclick="replayLevel()">Replay</button>
+          <button class="btn-modal" id="next-level-btn" onclick="nextLevel()">Next</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- HUD Overlay -->
+    <div id="hud">
+      <button class="hud-btn" onclick="openLevelSelect()" title="Level Select">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="#3d1c02"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+      </button>
+      <div class="hud-card">
+        <span class="hud-label">Score</span>
+        <span id="score" class="hud-value">0</span>
+      </div>
+      <div class="hud-card">
+        <span class="hud-label">Arrows</span>
+        <span id="arrows-left" class="hud-value">8</span>
+      </div>
+      <div class="hud-card">
+        <span class="hud-label">Target</span>
+        <span id="target-req" class="hud-value">0 / 60</span>
+      </div>
+    </div>
+
     <svg id="game" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1000 400" overflow="visible">
       <defs>
-        <!-- Background Gradient -->
         <linearGradient id="skyGradient" x1="0%" y1="0%" x2="0%" y2="100%">
           <stop offset="0%" stop-color="#1e1b4b" />
           <stop offset="60%" stop-color="#431407" />
           <stop offset="100%" stop-color="#78350f" />
         </linearGradient>
 
-        <!-- Sun Glow for Target Backdrop -->
         <radialGradient id="sunGlow" cx="50%" cy="50%" r="50%">
           <stop offset="0%" stop-color="#fbbf24" stop-opacity="0.8" />
           <stop offset="100%" stop-color="#fbbf24" stop-opacity="0" />
         </radialGradient>
 
-        <!-- Trajectory Arc Gradient -->
         <linearGradient id="ArcGradient">
-          <stop offset="0" stop-color="#fff" stop-opacity=".4"/>
-          <stop offset="100%" stop-color="#fff" stop-opacity="0"/>
+          <stop offset="0" stop-color="#fff" stop-opacity=".2"/>
+          <stop offset="50%" stop-color="#fff" stop-opacity="0"/>
         </linearGradient>
 
-        <!-- Arrow Definition -->
         <g id="arrow">
-          <line x2="60" fill="none" stroke="#e2e8f0" stroke-width="2" />
-          <polygon fill="#cbd5e1" points="64 0 58 3 58 -3" />
-          <polygon fill="#ef4444" points="2 -4 -4 -4 -1 0 -4 4 2 4 5 0" />
+          <line x2="60" fill="none" stroke="#888" stroke-width="2" />
+          <polygon fill="#888" points="64 0 58 2 56 0 58 -2" />
+          <polygon fill="#88ce02" points="2 -3 -4 -3 -1 0 -4 3 2 3 5 0" />
         </g>
       </defs>
 
-      <!-- Background -->
       <rect x="-200" y="-100" width="1400" height="600" fill="url(#skyGradient)" />
       <circle cx="900" cy="250" r="180" fill="url(#sunGlow)" />
 
-      <!-- Aiming Arc Trajectory -->
-      <path id="arc" fill="none" stroke="url(#ArcGradient)" stroke-width="3" stroke-dasharray="6,4" d="M100,250c250-400,550-400,800,0" pointer-events="none"/>
+      <path id="arc" fill="none" stroke="url(#ArcGradient)" stroke-width="4" d="M100,250c250-400,550-400,800,0" pointer-events="none"/>
 
-      <!-- Target Circles -->
-      <g id="target" transform="translate(900, 250) rotate(-30)">
-        <ellipse cx="0" cy="0" rx="40" ry="80" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
-        <ellipse cx="0" cy="0" rx="30" ry="60" fill="#000000"/>
-        <ellipse cx="0" cy="0" rx="20" ry="40" fill="#3b82f6"/>
-        <ellipse cx="0" cy="0" rx="10" ry="20" fill="#ef4444"/>
-        <ellipse cx="0" cy="0" rx="4" ry="8" fill="#eab308"/>
+      <g id="target">
+        <path fill="#FFF" d="M924.2,274.2c-21.5,21.5-45.9,19.9-52,3.2c-4.4-12.1,2.4-29.2,14.2-41c11.8-11.8,29-18.6,41-14.2 C944.1,228.3,945.7,252.8,924.2,274.2z" />
+        <path fill="#F4531C" d="M915.8,265.8c-14.1,14.1-30.8,14.6-36,4.1c-4.1-8.3,0.5-21.3,9.7-30.5s22.2-13.8,30.5-9.7 C930.4,235,929.9,251.7,915.8,265.8z" />
+        <path fill="#FFF" d="M908.9,258.9c-8,8-17.9,9.2-21.6,3.5c-3.2-4.9-0.5-13.4,5.6-19.5c6.1-6.1,14.6-8.8,19.5-5.6 C918.1,241,916.9,250.9,908.9,258.9z" />
+        <path fill="#F4531C" d="M903.2,253.2c-2.9,2.9-6.7,3.6-8.3,1.7c-1.5-1.8-0.6-5.4,2-8c2.6-2.6,6.2-3.6,8-2 C906.8,246.5,906.1,250.2,903.2,253.2z" />
       </g>
 
-      <!-- Bow -->
       <g id="bow" fill="none" stroke-linecap="round" vector-effect="non-scaling-stroke" pointer-events="none">
-        <polyline fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" points="88,200 88,250 88,300"/>
-        <path fill="none" stroke="#eab308" stroke-width="4" stroke-linecap="round" d="M88,300 c0-10.1,12-25.1,12-50s-12-39.9-12-50"/>
+        <polyline fill="none" stroke="#ddd" stroke-linecap="round" points="88,200 88,250 88,300"/>
+        <path fill="none" stroke="#88ce02" stroke-width="3" stroke-linecap="round" d="M88,300 c0-10.1,12-25.1,12-50s-12-39.9-12-50"/>
       </g>
 
-      <!-- Loaded Arrow -->
       <g class="arrow-angle"><use x="100" y="250" xlink:href="#arrow"/></g>
 
-      <!-- Fired Arrows Container -->
-      <g class="arrows" pointer-events="none"></g>
+      <clipPath id="mask">
+        <polygon opacity=".5" points="0,0 1500,0 1500,200 970,290 950,240 925,220 875,280 890,295 920,310 0,350" pointer-events="none"/>
+      </clipPath>
+      <g class="arrows" clip-path="url(#mask)" pointer-events="none"></g>
 
-      <!-- Feedback Texts -->
-      <text class="miss feedback-text" x="500" y="150" fill="#94a3b8" opacity="0">MISS!</text>
-      <text class="hit feedback-text" x="500" y="150" fill="#eab308" opacity="0">HIT!</text>
-      <text class="bullseye feedback-text" x="500" y="150" fill="#ef4444" opacity="0">BULLSEYE!</text>
+      <!-- Feedback Animations -->
+      <g class="miss" fill="#aaa" opacity="0" transform="translate(0, 100)">
+        <path d="M358 194L363 118 386 120 400 153 416 121 440 119 446 203 419 212 416 163 401 180 380 160 381 204"/>
+        <path d="M450 120L458 200 475 192 474 121"/>
+        <path d="M537 118L487 118 485 160 515 162 509 177 482 171 482 193 529 199 538 148 501 146 508 133 537 137"/>
+        <path d="M540 202L543 178 570 186 569 168 544 167 546 122 590 116 586 142 561 140 560 152 586 153 586 205"/>
+        <path d="M595,215l5-23l31,0l-5,29L595,215z M627,176l13-70l-41-0l-0,70L627,176z"/>
+      </g>
+
+      <g class="bullseye" fill="#F4531C" opacity="0">
+        <path d="M322,159l15-21l-27-13l-32,13l15,71l41-14l7-32L322,159z M292,142h20l3,8l-16,8 L292,142z M321,182l-18,9l-4-18l23-2V182z"/>
+        <path d="M340 131L359 125 362 169 381 167 386 123 405 129 392 183 351 186z"/>
+        <path d="M413 119L402 188 450 196 454 175 422 175 438 120z"/>
+        <path d="M432 167L454 169 466 154 451 151 478 115 453 113z"/>
+        <path d="M524 109L492 112 466 148 487 155 491 172 464 167 463 184 502 191 513 143 487 141 496 125 517 126z"/>
+        <path d="M537 114L512 189 558 199 566 174 533 175 539 162 553 164 558 150 543 145 547 134 566 148 575 124z"/>
+        <path d="M577 118L587 158 570 198 587 204 626 118 606 118 598 141 590 112z"/>
+        <path d="M635 122L599 198 643 207 649 188 624 188 630 170 639 178 645 162 637 158 649 143 662 151 670 134z"/>
+        <path d="M649,220l4-21l28,4l-6,25L649,220z M681,191l40-79l-35-8L659,184L681,191z"/>
+      </g>
+
+      <g class="hit" fill="#ffcc00" opacity="0" transform="translate(180, -80) rotate(12)">
+        <path d="M383 114L385 195 407 191 406 160 422 155 418 191 436 189 444 112 423 119 422 141 407 146 400 113"/>
+        <path d="M449 185L453 113 477 112 464 186"/>
+        <path d="M486 113L484 130 506 130 481 188 506 187 520 131 540 135 545 119"/>
+        <path d="M526,195l5-20l22,5l-9,16L526,195z M558,164l32-44l-35-9l-19,51L558,164z"/>
+      </g>
     </svg>
 
-    <span class="instruction">Pull back and release to shoot!</span>
+    <span class="instruction">Draw back an arrow and launch it!</span>
 
-    <!-- GSAP Animation Library -->
+    <!-- Dependency Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/1.19.1/TweenMax.min.js"></script>
+    <script src="https://s3-us-west-2.amazonaws.com/s.cdpn.io/16327/MorphSVGPlugin.min.js"></script>
 
-    <!-- Game Logic & Intro Script -->
+    <!-- Game Logic & Web Audio Synthesizer -->
     <script>
-      var introVideo = document.getElementById("intro-video");
-      var introContainer = document.getElementById("intro-container");
+      // --- AUDIO SYSTEM (Soft Piano Synthesizer) ---
+      var audioCtx = null;
+      var mainGainNode = null;
+      var isMusicOn = true;
+      var musicVolume = 0.3;
+      var isAudioStarted = false;
+      var pianoTimer = null;
 
-      function startGame() {
-        if (introContainer) {
-          introContainer.classList.add("hidden");
-          if (introVideo) {
-            introVideo.pause();
+      function initAudio() {
+        if (isAudioStarted) return;
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        mainGainNode = audioCtx.createGain();
+        mainGainNode.gain.value = isMusicOn ? musicVolume : 0;
+        mainGainNode.connect(audioCtx.destination);
+        isAudioStarted = true;
+        startPianoLoop();
+      }
+
+      function playPianoNote(freq, duration) {
+        if (!audioCtx || !isMusicOn) return;
+
+        var osc = audioCtx.createOscillator();
+        var noteGain = audioCtx.createGain();
+
+        // Soft sine wave with a subtle harmonic overlay for a piano-like tone
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+
+        var now = audioCtx.currentTime;
+        // Soft attack, gentle decay (typical of ambient piano)
+        noteGain.gain.setValueAtTime(0, now);
+        noteGain.gain.linearRampToValueAtTime(0.3, now + 0.08);
+        noteGain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+        osc.connect(noteGain);
+        noteGain.connect(mainGainNode);
+
+        osc.start(now);
+        osc.stop(now + duration);
+      }
+
+      // Soft ambient chord progression loop
+      function startPianoLoop() {
+        // Frequencies in Hz for C Major / Am calm progression
+        var chords = [
+          [261.63, 329.63, 392.00, 523.25], // C Major (C4, E4, G4, C5)
+          [220.00, 261.63, 329.63, 440.00], // A Minor (A3, C4, E4, A4)
+          [174.61, 261.63, 329.63, 349.23], // F Major (F3, C4, E4, F4)
+          [196.00, 246.94, 293.66, 392.00]  // G Major (G3, B3, D4, G4)
+        ];
+
+        var chordIdx = 0;
+        var noteIdx = 0;
+
+        setInterval(function() {
+          if (!audioCtx || !isMusicOn) return;
+          var currentChord = chords[chordIdx];
+          var freq = currentChord[noteIdx % currentChord.length];
+          
+          playPianoNote(freq, 2.5);
+
+          noteIdx++;
+          if (noteIdx % 4 === 0) {
+            chordIdx = (chordIdx + 1) % chords.length;
           }
+        }, 800);
+      }
+
+      function toggleMusic(enabled) {
+        isMusicOn = enabled;
+        if (!isAudioStarted && enabled) initAudio();
+        if (mainGainNode) {
+          mainGainNode.gain.value = isMusicOn ? musicVolume : 0;
         }
       }
 
-      // Automatically transition to game when intro finishes
-      introVideo.addEventListener("ended", function() {
-        startGame();
-      });
-
-      // Fallback: If autoplay is blocked by browser policy, allow click anywhere to start
-      introContainer.addEventListener("click", function(e) {
-        if (e.target.tagName !== "BUTTON") {
-          introVideo.play().catch(function() {
-            startGame();
-          });
+      function setMusicVolume(val) {
+        musicVolume = parseFloat(val);
+        if (mainGainNode && isMusicOn) {
+          mainGainNode.gain.value = musicVolume;
         }
-      });
+      }
 
-      // --- Archery Game Logic ---
-      var svg = document.querySelector("svg#game");
+      // Initialize audio on first user touch/click
+      window.addEventListener('pointerdown', function() { initAudio(); }, { once: true });
+      window.addEventListener('touchstart', function() { initAudio(); }, { once: true });
+
+
+      // --- GAME ENGINE LOGIC ---
+      var svg = document.querySelector("svg");
       var cursor = svg.createSVGPoint();
       var arrows = document.querySelector(".arrows");
       var randomAngle = 0;
 
-      var target = { x: 900, y: 250 };
-      var lineSegment = { x1: 880, y1: 290, x2: 920, y2: 210 };
+      var TOTAL_LEVELS = 15;
+      var MAX_ARROWS = 8;
+      var levelData = {}; 
+      var unlockedLevels = 1;
+
+      var currentLevel = 1;
+      var score = 0;
+      var arrowsRemaining = MAX_ARROWS;
+      var levelTargetScore = 60;
+      var totalCumulativeScore = 0;
+
+      var gameActive = false;
+      var target = { x: 900, y: 249.5 };
+      var lineSegment = { x1: 875, y1: 280, x2: 925, y2: 220 };
       var pivot = { x: 100, y: 250 };
 
       var isDragging = false;
       var dragStart = { x: 0, y: 0 };
-      var currentBezierPoints = null;
 
       svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+
+      // Load Saved Progress
+      function loadProgress() {
+        var savedData = localStorage.getItem("archery_level_data");
+        if (savedData) levelData = JSON.parse(savedData);
+
+        var savedUnlocked = localStorage.getItem("archery_unlocked_levels");
+        if (savedUnlocked) unlockedLevels = parseInt(savedUnlocked);
+      }
+
+      function saveProgress() {
+        localStorage.setItem("archery_level_data", JSON.stringify(levelData));
+        localStorage.setItem("archery_unlocked_levels", unlockedLevels);
+      }
+
+      loadProgress();
 
       window.addEventListener("pointerdown", startDrag);
       window.addEventListener("touchstart", startDrag, { passive: false });
 
+      function toggleModal(modalId, show) {
+        var modal = document.getElementById(modalId);
+        if (show) modal.classList.add("active");
+        else modal.classList.remove("active");
+      }
+
+      function toggleWind(enabled) {
+        var particles = document.querySelector(".particles");
+        if (particles) particles.style.display = enabled ? "block" : "none";
+      }
+
+      function resetGameProgress() {
+        levelData = {};
+        unlockedLevels = 1;
+        totalCumulativeScore = 0;
+        saveProgress();
+        renderLevelGrid();
+        toggleModal("settings-modal", false);
+        showMainMenu();
+      }
+
+      function showMainMenu() {
+        gameActive = false;
+        document.getElementById("main-menu").classList.remove("hidden");
+        document.getElementById("level-select").classList.add("hidden");
+        document.getElementById("hud").classList.remove("active");
+        document.querySelector(".instruction").classList.remove("active");
+        toggleModal("level-complete-modal", false);
+      }
+
+      function openLevelSelect() {
+        gameActive = false;
+        renderLevelGrid();
+        document.getElementById("main-menu").classList.add("hidden");
+        document.getElementById("level-select").classList.remove("hidden");
+        document.getElementById("hud").classList.remove("active");
+        document.querySelector(".instruction").classList.remove("active");
+        toggleModal("level-complete-modal", false);
+      }
+
+      function renderLevelGrid() {
+        var grid = document.getElementById("level-grid");
+        grid.innerHTML = "";
+
+        for (var i = 1; i <= TOTAL_LEVELS; i++) {
+          var card = document.createElement("div");
+          var isUnlocked = i <= unlockedLevels;
+          card.className = "level-card" + (isUnlocked ? "" : " locked");
+
+          if (isUnlocked) {
+            var starsEarned = levelData[i] || 0;
+            var starsHTML = "";
+            for (var s = 1; s <= 3; s++) {
+              starsHTML += '<span class="star ' + (s <= starsEarned ? "active" : "") + '">★</span>';
+            }
+
+            card.innerHTML = `
+              <span class="level-num">${i}</span>
+              <div class="level-stars">${starsHTML}</div>
+            `;
+            (function(levelNum) {
+              card.onclick = function() { startLevel(levelNum); };
+            })(i);
+          } else {
+            card.innerHTML = `<span class="lock-icon">🔒</span>`;
+          }
+
+          grid.appendChild(card);
+        }
+      }
+
+      function startLevel(levelNum) {
+        currentLevel = levelNum;
+        score = 0;
+        arrowsRemaining = MAX_ARROWS;
+
+        levelTargetScore = 40 + (levelNum * 20);
+
+        arrows.innerHTML = "";
+        updateHUD();
+
+        document.getElementById("level-select").classList.add("hidden");
+        document.getElementById("main-menu").classList.add("hidden");
+        document.getElementById("hud").classList.add("active");
+        document.querySelector(".instruction").classList.add("active");
+        toggleModal("level-complete-modal", false);
+
+        gameActive = true;
+      }
+
       function startDrag(e) {
+        if (!gameActive || arrowsRemaining <= 0) return;
         if (e.cancelable) e.preventDefault();
 
         var point = getMouseSVG(e);
@@ -242,7 +979,8 @@
         dragStart.x = point.x;
         dragStart.y = point.y;
 
-        randomAngle = (Math.random() * Math.PI * 0.02) - 0.01;
+        var swayFactor = 0.01 + (currentLevel * 0.003);
+        randomAngle = (Math.random() * Math.PI * swayFactor) - (swayFactor / 2);
         TweenMax.set(".arrow-angle use", { opacity: 1 });
 
         window.addEventListener("pointermove", aim, { passive: false });
@@ -254,7 +992,7 @@
       }
 
       function aim(e) {
-        if (!isDragging) return;
+        if (!isDragging || !gameActive) return;
         if (e.cancelable) e.preventDefault();
 
         var currentPoint = getMouseSVG(e);
@@ -262,7 +1000,6 @@
 
         var dragDx = currentPoint.x - dragStart.x;
         var dragDy = currentPoint.y - dragStart.y;
-
         var dx = -dragDx;
         var dy = -dragDy;
 
@@ -272,26 +1009,21 @@
         }
 
         var angle = Math.atan2(dy, dx) + randomAngle;
-        var bowAngle = angle;
-
-        var dragDistance = Math.sqrt((dragDx * dragDx) + (dragDy * dragDy));
-        var distance = Math.min(dragDistance, 50);
+        var distance = Math.min(Math.sqrt((dragDx * dragDx) + (dragDy * dragDy)), 50);
         var scale = Math.min(Math.max(distance / 30, 1), 2);
 
         TweenMax.set("#bow", {
           scaleX: scale,
-          rotation: bowAngle + "rad",
+          rotation: angle + "rad",
           transformOrigin: "right center"
         });
 
         TweenMax.set(".arrow-angle", {
-          rotation: bowAngle + "rad",
+          rotation: angle + "rad",
           svgOrigin: "100 250"
         });
 
-        TweenMax.set(".arrow-angle use", {
-          x: -distance
-        });
+        TweenMax.set(".arrow-angle use", { x: -distance });
 
         TweenMax.set("#bow polyline", {
           attr: {
@@ -301,17 +1033,10 @@
 
         var radius = distance * 9;
         var offset = {
-          x: (Math.cos(bowAngle) * radius),
-          y: (Math.sin(bowAngle) * radius)
+          x: (Math.cos(angle) * radius),
+          y: (Math.sin(angle) * radius)
         };
         var arcWidth = offset.x * 3;
-
-        currentBezierPoints = {
-          p0: { x: 100, y: 250 },
-          p1: { x: 100 + offset.x, y: 250 + offset.y },
-          p2: { x: 100 + arcWidth - offset.x, y: 250 + offset.y + 50 },
-          p3: { x: 100 + arcWidth, y: 300 }
-        };
 
         TweenMax.set("#arc", {
           attr: {
@@ -321,21 +1046,12 @@
         });
       }
 
-      function getBezierPoint(t, p0, p1, p2, p3) {
-        var u = 1 - t;
-        var tt = t * t;
-        var uu = u * u;
-        var uuu = uu * u;
-        var ttt = tt * t;
-
-        var x = uuu * p0.x + 3 * uu * t * p1.x + 3 * u * tt * p2.x + ttt * p3.x;
-        var y = uuu * p0.y + 3 * uu * t * p1.y + 3 * u * tt * p2.y + ttt * p3.y;
-        return { x: x, y: y };
-      }
-
       function loose(e) {
         if (!isDragging) return;
         isDragging = false;
+
+        arrowsRemaining--;
+        updateHUD();
 
         window.removeEventListener("pointermove", aim);
         window.removeEventListener("touchmove", aim);
@@ -356,39 +1072,27 @@
         newArrow.setAttributeNS('http://www.w3.org/1999/xlink', 'href', "#arrow");
         arrows.appendChild(newArrow);
 
-        var flightProgress = { t: 0 };
-        var bp = currentBezierPoints;
-
-        TweenMax.to(flightProgress, 0.5, {
-          t: 1,
-          ease: Linear.easeNone,
-          onUpdate: function() {
-            var curr = getBezierPoint(flightProgress.t, bp.p0, bp.p1, bp.p2, bp.p3);
-            var next = getBezierPoint(Math.min(flightProgress.t + 0.01, 1), bp.p0, bp.p1, bp.p2, bp.p3);
-            var angleDeg = Math.atan2(next.y - curr.y, next.x - curr.x) * (180 / Math.PI);
-
-            newArrow._gsTransform = { x: curr.x, y: curr.y, rotation: angleDeg };
-            TweenMax.set(newArrow, {
-              x: curr.x,
-              y: curr.y,
-              rotation: angleDeg,
-              transformOrigin: "0px 0px"
-            });
-
-            hitTest({ target: [newArrow] }, this);
+        var path = MorphSVGPlugin.pathDataToBezier("#arc");
+        TweenMax.to([newArrow], 0.5, {
+          force3D: true,
+          bezier: {
+            type: "cubic",
+            values: path,
+            autoRotate: ["x", "y", "rotation"]
           },
-          onComplete: onMiss
+          onUpdate: hitTest,
+          onUpdateParams: ["{self}"],
+          onComplete: onShotFinished,
+          ease: Linear.easeNone
         });
 
         TweenMax.to("#arc", 0.2, { opacity: 0 });
         TweenMax.set(".arrow-angle use", { opacity: 0 });
       }
 
-      function hitTest(tweenObj, flightTween) {
-        var arrow = tweenObj.target[0];
+      function hitTest(tween) {
+        var arrow = tween.target[0];
         var transform = arrow._gsTransform;
-        if (!transform) return;
-
         var radians = transform.rotation * Math.PI / 180;
         var arrowSegment = {
           x1: transform.x,
@@ -399,32 +1103,111 @@
 
         var intersection = getIntersection(arrowSegment, lineSegment);
         if (intersection && intersection.segment1 && intersection.segment2) {
-          if (flightTween) flightTween.pause();
+          tween.pause();
           var dx = intersection.x - target.x;
           var dy = intersection.y - target.y;
           var distance = Math.sqrt((dx * dx) + (dy * dy));
+          var pointsEarned = 0;
           var selector = ".hit";
-          if (distance < 12) {
+
+          if (distance < 7) {
             selector = ".bullseye";
+            pointsEarned = 50;
+          } else {
+            pointsEarned = Math.max(10, Math.round(35 - distance));
           }
+
+          score += pointsEarned;
+          totalCumulativeScore += pointsEarned;
+          updateHUD();
           showMessage(selector);
+          onShotFinished();
         }
       }
 
-      function onMiss() {
-        showMessage(".miss");
+      function onShotFinished() {
+        if (arrowsRemaining <= 0) {
+          setTimeout(completeLevel, 1200);
+        }
+      }
+
+      function completeLevel() {
+        gameActive = false;
+
+        var starsEarned = 0; 
+        if (score >= levelTargetScore) starsEarned = 1;
+        if (score >= levelTargetScore + 40) starsEarned = 2;
+        if (score >= levelTargetScore + 80) starsEarned = 3;
+
+        if (starsEarned > 0) {
+          if (!levelData[currentLevel] || starsEarned > levelData[currentLevel]) {
+            levelData[currentLevel] = starsEarned;
+          }
+          if (currentLevel === unlockedLevels && unlockedLevels < TOTAL_LEVELS) {
+            unlockedLevels++;
+          }
+          saveProgress();
+        }
+
+        document.getElementById("complete-title").textContent = score >= levelTargetScore ? "LEVEL COMPLETE" : "LEVEL FAILED";
+        document.getElementById("end-score").textContent = score;
+        document.getElementById("end-target").textContent = levelTargetScore;
+
+        for (var s = 1; s <= 3; s++) {
+          var starEl = document.getElementById("star-" + s);
+          if (s <= starsEarned) starEl.classList.add("earned");
+          else starEl.classList.remove("earned");
+        }
+
+        var nextBtn = document.getElementById("next-level-btn");
+        if (currentLevel >= TOTAL_LEVELS || score < levelTargetScore) {
+          nextBtn.style.display = "none";
+        } else {
+          nextBtn.style.display = "block";
+        }
+
+        toggleModal("level-complete-modal", true);
+      }
+
+      function replayLevel() {
+        startLevel(currentLevel);
+      }
+
+      function nextLevel() {
+        if (currentLevel < TOTAL_LEVELS) {
+          startLevel(currentLevel + 1);
+        }
+      }
+
+      function updateHUD() {
+        document.getElementById("score").textContent = score;
+        document.getElementById("arrows-left").textContent = arrowsRemaining;
+        document.getElementById("target-req").textContent = score + " / " + levelTargetScore;
+        document.getElementById("lb-your-score").textContent = totalCumulativeScore;
       }
 
       function showMessage(selector) {
         TweenMax.killTweensOf(selector);
-        TweenMax.set(selector, { autoAlpha: 1, scale: 0.2, transformOrigin: "center center" });
-        TweenMax.to(selector, 0.4, { scale: 1, ease: Back.easeOut });
-        TweenMax.to(selector, 0.3, { delay: 1.5, autoAlpha: 0, scale: 0.2 });
+        TweenMax.killChildTweensOf(selector);
+        TweenMax.set(selector, { autoAlpha: 1 });
+        TweenMax.staggerFromTo(selector + " path", .5, {
+          rotation: -5,
+          scale: 0,
+          transformOrigin: "center"
+        }, {
+          scale: 1,
+          ease: Back.easeOut
+        }, .05);
+        TweenMax.staggerTo(selector + " path", .3, {
+          delay: 1.5,
+          rotation: 20,
+          scale: 0,
+          ease: Back.easeIn
+        }, .03);
       }
 
       function getMouseSVG(e) {
         var clientX, clientY;
-
         if (e.touches && e.touches.length > 0) {
           clientX = e.touches[0].clientX;
           clientY = e.touches[0].clientY;
@@ -465,6 +1248,36 @@
           segment2: ub >= 0 && ub <= 1
         };
       }
+
+      function createWindParticles() {
+        var svgNS = "http://www.w3.org/2000/svg";
+        var particleGroup = document.createElementNS(svgNS, "g");
+        particleGroup.setAttribute("class", "particles");
+        svg.insertBefore(particleGroup, svg.firstChild);
+
+        for (var i = 0; i < 20; i++) {
+          var circle = document.createElementNS(svgNS, "circle");
+          circle.setAttribute("r", Math.random() * 2 + 1);
+          circle.setAttribute("fill", "#ffffff");
+          circle.setAttribute("opacity", Math.random() * 0.4 + 0.1);
+          particleGroup.appendChild(circle);
+
+          TweenMax.set(circle, {
+            x: Math.random() * 1000,
+            y: Math.random() * 500
+          });
+
+          TweenMax.to(circle, Math.random() * 3 + 2, {
+            x: "+=200",
+            y: "+=30",
+            repeat: -1,
+            ease: Linear.easeNone
+          });
+        }
+      }
+
+      // Initialize System
+      createWindParticles();
     </script>
   </body>
 </html>
